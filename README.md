@@ -74,6 +74,20 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### Iniciar o Navegador com Remote Debugging
+
+Antes de executar o bot, é necessário iniciar o Google Chrome em modo de debugging para que o Playwright possa se conectar:
+
+```bash
+google-chrome --remote-debugging-port=9222 --user-data-dir="/tmp/chrome_dev_sessao"
+```
+
+Após iniciar o Chrome com este comando, execute o bot em outro terminal:
+
+```bash
+sudo docker run --rm -it --network host --env-file .env -v "$PWD":/app robo-hspm-mvp
+```
+
 ## 📋 Funcionalidades
 
 - ✅ **Monitoramento Automático**: Verifica periodicamente vagas em múltiplas especialidades
@@ -82,6 +96,18 @@ python main.py
 - ✅ **Capturas de Tela**: Registra automaticamente a tela quando uma vaga é disponibilizada
 - ✅ **Logs Detalhados**: Mantém um histórico completo das operações
 - ✅ **Múltiplas Especialidades**: Monitora várias especialidades médicas simultaneamente
+- ✅ **Recuperação de Sessão**: Detecta quando a sessão expira e solicita novo CAPTCHA via Telegram
+- ✅ **Histórico em CSV**: Registra automaticamente cada busca e resultado em arquivo CSV
+
+## 🔄 Atualizações Recentes
+
+### v1.1.0
+- ✨ **CAPTCHA via Telegram**: O bot agora solicita o CAPTCHA através do Telegram quando a sessão expira
+- 📝 **Registro em CSV**: Todas as buscas são registradas em `historico_buscas.csv` para análise posterior
+- 📂 **Especialidades Dinâmicas**: Carregamento de especialidades a partir do arquivo `especialidades.txt`
+- 🔄 **Detecção de Deslogin**: O bot identifica automaticamente quando foi deslogado e reinicia o fluxo
+- 🐳 **Suporte a Chrome Remoto**: Integração com Chrome rodando em debugging mode via CDP (Chrome DevTools Protocol)
+- 🛡️ **Tratamento de Erros Robusto**: Melhorias significativas no tratamento de exceções e recuperação de falhas
 
 ## 🎯 Especialidades Monitoradas
 

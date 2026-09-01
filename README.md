@@ -1,148 +1,184 @@
 # Bot de Agendamento HSPM 🤖🏥
 
-Um script de automação em Python desenvolvido para monitorar e buscar vagas de consultas médicas em múltiplas especialidades no portal do Hospital do Servidor Público Municipal (HSPM). O bot utiliza Playwright para interagir com a interface web, faz login automático com suas credenciais e envia notificações em tempo real via Telegram caso encontre horários disponíveis.
+Automação em Python que monitora vagas de consultas médicas em múltiplas
+especialidades no portal do Hospital do Servidor Público Municipal (HSPM).
+Usa Playwright para controlar uma sessão do Chrome já logada, e envia
+alertas em tempo real via Telegram quando encontra horários disponíveis.
 
-## 🛠️ Tecnologias Utilizadas
+## 🛠️ Stack
 
-* **Python 3.11**
-* **Playwright** (Automação web e navegação)
-* **Docker** (Containerização)
-* **API do Telegram** (Notificações e Alertas)
-* **Requests** (Comunicação com Telegram)
+* **Python 3.13**
+* **uv** — gerenciador de dependências e ambiente (substitui pip/venv/Poetry)
+* **Playwright** — automação web via CDP (Chrome DevTools Protocol)
+* **httpx** — cliente HTTP assíncrono (integração com a API do Telegram)
+* **pydantic-settings** — validação de configuração via variáveis de ambiente
+* **Docker / Dev Containers** — ambiente de desenvolvimento containerizado
+* **ruff** — lint e formatação
+* **pytest** — testes automatizados
+* **pre-commit** — checagens automáticas antes de cada commit
+
+## 📁 Estrutura do projeto
+
+```
+vagas-hspm/
+├── .devcontainer/
+│   └── devcontainer.json
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── src/
+│   └── vagas_hspm/
+│       ├── __init__.py
+│       ├── __main__.py         # ponto de entrada
+│       ├── config.py           # Settings (pydantic-settings)
+│       ├── models.py           # StatusBusca (enum)
+│       ├── telegram_client.py  # cliente assíncrono do bot do Telegram
+│       ├── storage.py          # histórico CSV + leitura de especialidades
+│       ├── browser.py          # automação da página (Playwright)
+│       └── monitor.py          # orquestração do loop principal
+├── tests/
+│   └── test_storage.py
+├── especialidades.txt          # lista monitorada, uma especialidade por linha
+├── .env.example
+├── .gitignore
+├── .pre-commit-config.yaml
+├── Dockerfile
+├── pyproject.toml
+└── README.md
+```
 
 ## ⚙️ Pré-requisitos
 
-Antes de iniciar, certifique-se de ter instalado em sua máquina:
-* [Docker](https://docs.docker.com/get-docker/)
-* Um bot configurado no Telegram (com Token e Chat ID)
+* [Docker](https://docs.docker.com/get-docker/) instalado, com seu usuário
+  no grupo `docker` (para rodar sem `sudo` — necessário para o Dev Container)
+* [VS Code](https://code.visualstudio.com/) com a extensão **Dev Containers**
+* Google Chrome instalado na máquina host
+* Um bot configurado no Telegram (Token e Chat ID)
 * Acesso ao portal de agendamento do HSPM
 
-## 📝 Configuração
+> **Nota de rede:** o container roda com `--network host`, então funciona de
+> forma nativa e completa apenas em **Linux**. Em Mac/Windows (Docker
+> Desktop) a configuração de rede precisa de ajuste (`host.docker.internal`
+> em vez de `localhost` para o CDP).
 
-### 1. Clone este repositório para a sua máquina
+## 📝 Configuração inicial
+
+### 1. Clonar o repositório
 
 ```bash
 git clone https://github.com/Rjj18/bot-consultas.git
 cd bot-consultas
 ```
 
-### 2. Configure as variáveis de ambiente
+### 2. Configurar variáveis de ambiente
 
-Na raiz do projeto, crie um arquivo chamado `.env` e preencha com as suas credenciais:
-
-```env
-URL_AGENDAMENTO=https://hspmagendamentoportal.hspm.sp.gov.br/NovoAgendamento
-CPF=seu_cpf_aqui
-SENHA=sua_senha_aqui
-TELEGRAM_TOKEN=seu_token_do_telegram_aqui
-CHAT_ID=seu_chat_id_aqui
-```
-
-### 3. Variáveis de Ambiente Explicadas
-
-| Variável | Descrição | Exemplo |
-|----------|-----------|---------|
-| `URL_AGENDAMENTO` | URL do portal de agendamento do HSPM | `https://hspmagendamentoportal.hspm.sp.gov.br/NovoAgendamento` |
-| `CPF` | Seu CPF para login | `12345678910` |
-| `SENHA` | Sua senha para login | `sua_senha_segura` |
-| `TELEGRAM_TOKEN` | Token do bot Telegram | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11` |
-| `CHAT_ID` | Seu ID de chat no Telegram | `987654321` |
-
-## 🚀 Como Usar
-
-### Construir a Imagem Docker
+Copie `.env.example` para `.env` e preencha:
 
 ```bash
-sudo docker build -t bot-consultas .
+cp .env.example .env
 ```
 
-### Executar o Bot com Docker
+| Variável | Descrição | Obrigatória |
+|---|---|---|
+| `URL_AGENDAMENTO` | URL do portal de agendamento do HSPM | Sim |
+| `TELEGRAM_TOKEN` | Token do bot do Telegram | Sim |
+| `CHAT_ID` | ID do chat no Telegram para onde os alertas vão | Sim |
+| `CPF` | CPF para login automático | Não — só se quiser login automático |
+| `SENHA` | Senha para login automático | Não — só se quiser login automático |
+| `CDP_URL` | Endereço do Chrome com debug remoto | Não — padrão `http://localhost:9222` |
+| `TEMPO_ESPERA_MINUTOS` | Intervalo entre varreduras | Não — padrão `5` |
 
-```bash
-sudo docker run --rm -it \
-  --env-file .env \
-  -v "$PWD":/app \
-  bot-consultas
+### 3. Definir as especialidades monitoradas
+
+Edite `especialidades.txt` — uma especialidade por linha:
+
+```
+Clínica Médica
+Dermatologia
+Nutrição - Dietética
+Odontologia - Dentística
+Otorrinolaringologia
+Urologia
 ```
 
-### Executar Diretamente no Python
+O bot recarrega esse arquivo a cada ciclo — dá para editar com o bot já
+rodando, sem precisar reiniciar.
 
-Se preferir executar sem Docker:
+## 🚀 Como rodar
 
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
-### Iniciar o Navegador com Remote Debugging
-
-Antes de executar o bot, é necessário iniciar o Google Chrome em modo de debugging para que o Playwright possa se conectar:
+### 1. Abrir o Chrome com debug remoto (na máquina host, fora do container)
 
 ```bash
 google-chrome --remote-debugging-port=9222 --user-data-dir="/tmp/chrome_dev_sessao"
 ```
 
-Após iniciar o Chrome com este comando, execute o bot em outro terminal:
+Deixe essa janela aberta e faça login manualmente no portal do HSPM nela —
+é essa sessão que o Playwright vai controlar.
+
+### 2. Abrir o projeto no Dev Container
+
+No VS Code: `Ctrl+Shift+P` → **Dev Containers: Reopen in Container**.
+
+Isso builda a imagem a partir do `Dockerfile` e roda automaticamente
+`uv sync` (via `postCreateCommand`), instalando todas as dependências.
+
+### 3. Rodar o bot
+
+No terminal integrado do VS Code (já dentro do container):
 
 ```bash
-sudo docker run --rm -it --network host --env-file .env -v "$PWD":/app robo-hspm-mvp
+uv run python -m vagas_hspm
 ```
+
+Se tudo estiver certo, você recebe a mensagem "🤖 Robô iniciado!" no
+Telegram configurado.
+
+## 🔄 Fluxo de desenvolvimento
+
+```bash
+uv run pre-commit install   # uma vez, após clonar — ativa os hooks de commit
+uv run ruff check .         # lint
+uv run ruff format .        # formatação
+uv run mypy src              # checagem de tipos
+uv run pytest                # testes
+```
+
+O `pre-commit` já roda lint e formatação automaticamente antes de cada
+`git commit`. O CI (`.github/workflows/ci.yml`) roda a mesma suíte completa
+a cada push/pull request.
+
+> Alterou o `Dockerfile` ou o `devcontainer.json`? Rode **Dev Containers:
+> Rebuild Container**. Alterou qualquer outro arquivo (`.env`, `.py`,
+> `especialidades.txt`)? Só salvar e rodar de novo — não precisa de rebuild.
 
 ## 📋 Funcionalidades
 
-- ✅ **Monitoramento Automático**: Verifica periodicamente vagas em múltiplas especialidades
-- ✅ **Autenticação Automática**: Faz login com CPF e senha automaticamente
-- ✅ **Notificações em Tempo Real**: Envia alertas via Telegram quando uma vaga é encontrada
-- ✅ **Capturas de Tela**: Registra automaticamente a tela quando uma vaga é disponibilizada
-- ✅ **Logs Detalhados**: Mantém um histórico completo das operações
-- ✅ **Múltiplas Especialidades**: Monitora várias especialidades médicas simultaneamente
-- ✅ **Recuperação de Sessão**: Detecta quando a sessão expira e solicita novo CAPTCHA via Telegram
-- ✅ **Histórico em CSV**: Registra automaticamente cada busca e resultado em arquivo CSV
+- ✅ Monitoramento automático e periódico de múltiplas especialidades
+- ✅ Detecção de sessão expirada com recuperação de CAPTCHA via Telegram
+- ✅ Login automático com CPF e senha (opcional)
+- ✅ Alertas em tempo real no Telegram, com print da tela quando encontra vaga
+- ✅ Histórico de buscas em CSV (`historico_buscas.csv`)
+- ✅ Lista de especialidades editável em runtime, sem reiniciar o bot
+- ✅ Configuração validada na inicialização (falha cedo se faltar algo)
 
-## 🔄 Atualizações Recentes
+## 📱 Configurar o bot do Telegram
 
-### v1.1.0
-- ✨ **CAPTCHA via Telegram**: O bot agora solicita o CAPTCHA através do Telegram quando a sessão expira
-- 📝 **Registro em CSV**: Todas as buscas são registradas em `historico_buscas.csv` para análise posterior
-- 📂 **Especialidades Dinâmicas**: Carregamento de especialidades a partir do arquivo `especialidades.txt`
-- 🔄 **Detecção de Deslogin**: O bot identifica automaticamente quando foi deslogado e reinicia o fluxo
-- 🐳 **Suporte a Chrome Remoto**: Integração com Chrome rodando em debugging mode via CDP (Chrome DevTools Protocol)
-- 🛡️ **Tratamento de Erros Robusto**: Melhorias significativas no tratamento de exceções e recuperação de falhas
+1. No Telegram, procure `@BotFather` e use `/newbot`.
+2. Copie o token gerado para `TELEGRAM_TOKEN` no `.env`.
+3. Envie uma mensagem qualquer para o seu bot.
+4. Acesse `https://api.telegram.org/bot<SEU_TOKEN>/getUpdates` e copie o
+   `chat.id` da resposta para `CHAT_ID` no `.env`.
 
-## 🎯 Especialidades Monitoradas
+## ⚠️ Avisos importantes
 
-O bot atualmente monitora as seguintes especialidades:
-
-- Clínica Médica
-- Dermatologia
-- Nutrição - Dietética
-- Odontologia - Dentística
-- Otorrinolaringologia
-- Urologia
-
-Para adicionar ou remover especialidades, edite a lista `ESPECIALIDADES` no arquivo `main.py`.
-
-## 📱 Configurar Bot do Telegram
-
-1. Abra o Telegram e procure por `@BotFather`
-2. Inicie uma conversa e use o comando `/newbot`
-3. Siga as instruções para criar seu bot
-4. Copie o token fornecido e adicione ao arquivo `.env`
-5. Para obter seu `CHAT_ID`, envie uma mensagem para seu bot e acesse: `https://api.telegram.org/botSEU_TOKEN/getUpdates`
-
-## ⚙️ Tempo de Espera
-
-Por padrão, o bot verifica vagas a cada 5 minutos. Para alterar este intervalo, edite a variável `TEMPO_ESPERA_MINUTOS` no arquivo `main.py`.
-
-## 📝 Logs
-
-Os logs da aplicação são exibidos no console com timestamp e nível de severidade (INFO, ERROR, WARNING).
-
-## ⚠️ Avisos Importantes
-
-- **Segurança**: Nunca compartilhe seu arquivo `.env` ou suas credenciais com outras pessoas
-- **Responsabilidade**: Use este bot de forma responsável e em conformidade com os termos de serviço do HSPM
-- **Manutenção**: O bot pode necessitar de ajustes se o portal do HSPM sofrer atualizações em sua interface
+- **Segurança**: nunca compartilhe o `.env` ou suas credenciais. Ele já está
+  no `.gitignore` e nunca deve ser commitado.
+- **Sessão do Chrome**: o `connect_over_cdp` depende do Chrome permanecer
+  aberto com debug remoto durante toda a execução do bot.
+- **Responsabilidade**: use este bot de forma responsável e em conformidade
+  com os termos de uso do portal do HSPM.
+- **Manutenção**: seletores de página (`browser.py`) podem quebrar se o
+  portal do HSPM mudar sua interface.
 
 ## 📄 Licença
 

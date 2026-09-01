@@ -1,5 +1,9 @@
 # Bot de Agendamento HSPM 🤖🏥
 
+**Descrição curta (PT):** Um bot Python para monitoramento de vagas de consultas e envio de alertas via Telegram.
+
+**Short description (EN):** A Python bot to monitor medical appointment openings and send alerts via Telegram.
+
 Automação em Python que monitora vagas de consultas médicas em múltiplas
 especialidades no portal do Hospital do Servidor Público Municipal (HSPM).
 Usa Playwright para controlar uma sessão do Chrome já logada, e envia

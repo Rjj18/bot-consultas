@@ -83,6 +83,12 @@ class PortalAgendamento:
         await self._page.locator(SELETOR_BOTAO_ENTRAR).first.click()
         await self._page.wait_for_timeout(5000)
 
+    async def esta_na_pagina_de_agendamento(self) -> bool:
+        """Retorna True quando a página atual parece ser a do portal de agendamento."""
+        url_atual = (self._page.url or "").lower()
+        url_esperada = self._url.lower()
+        return "hspm" in url_atual or "agendamento" in url_atual or url_esperada in url_atual
+
     async def ir_para_agendamento(self) -> None:
         await self._page.goto(self._url)
         await self._page.wait_for_load_state("networkidle")

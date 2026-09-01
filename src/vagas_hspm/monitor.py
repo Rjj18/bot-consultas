@@ -127,7 +127,8 @@ async def monitorar_vagas(settings: Settings) -> None:
                         continue
 
                     await page.bring_to_front()
-                    if "hspm" not in page.url.lower():
+                    if not await portal.esta_na_pagina_de_agendamento():
+                        logger.info("Página incorreta. Navegando para a página correta.")
                         await portal.ir_para_agendamento()
 
                     if await portal.esta_deslogado():

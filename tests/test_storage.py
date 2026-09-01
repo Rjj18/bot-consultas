@@ -5,8 +5,11 @@ isoladamente — não têm I/O de rede nem dependem do Playwright, só do sistem
 de arquivos, então rodam rápido e sem mocks complexos.
 """
 
+import asyncio
 from pathlib import Path
+from unittest.mock import Mock
 
+from vagas_hspm.browser import PortalAgendamento
 from vagas_hspm.models import StatusBusca
 from vagas_hspm.storage import HistoricoBuscas, carregar_especialidades
 
@@ -35,3 +38,14 @@ def test_historico_registra_e_cria_cabecalho(tmp_path: Path) -> None:
     conteudo = caminho.read_text(encoding="utf-8")
     assert "data_hora,especialidade,status" in conteudo
     assert "Cardiologia,SEM_VAGA" in conteudo
+
+
+def test_portal_verifica_se_esta_na_pagina_de_agendamento() -> None:
+    page = Mock()
+    page.url = "https://example.com/agendamento"
+    portal = PortalAgendamento(page, "https://example.com/agendamento")
+
+    assert asyncio.run(portal.esta_na_pagina_de_agendamento())
+
+    page.url = "https://example.com/other"
+    assert not asyncio.run(portal.esta_na_pagina_de_agendamento())

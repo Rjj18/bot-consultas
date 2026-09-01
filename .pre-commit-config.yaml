@@ -1,0 +1,6 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff          # verifica erros de lint e corrige o que der (--fix)
+      - id: ruff-format    # formata o código (equivalente ao "black" do ruff)

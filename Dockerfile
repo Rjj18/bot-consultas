@@ -1,17 +1,16 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 WORKDIR /app
 
-# Configuração de timezone (útil para os logs da aplicação)
-RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
-ENV TZ="America/Sao_Paulo"
+COPY pyproject.toml uv.lock* ./
+RUN uv sync --frozen --no-install-project || uv sync --no-install-project
 
-# Copia os requisitos e instala
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copia o restante do código da aplicação
 COPY . .
+RUN uv sync --frozen || uv sync
 
-# Comando de execução
-CMD ["python", "main.py"]
+CMD ["uv", "run", "python", "-m", "vagas_hspm"]

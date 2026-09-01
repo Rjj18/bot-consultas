@@ -1,0 +1,23 @@
+{
+  "name": "Vagas HSPM Dev Container",
+  "build": {
+    "dockerfile": "../Dockerfile"
+  },
+  "runArgs": [
+    "--network=host"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "saoudrizwan.claude-dev",
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/app/.venv/bin/python"
+      }
+    }
+  },
+  "postCreateCommand": "uv sync"
+}

@@ -11,7 +11,12 @@ from unittest.mock import Mock
 
 from vagas_hspm.browser import PortalAgendamento
 from vagas_hspm.models import StatusBusca
-from vagas_hspm.storage import HistoricoBuscas, carregar_especialidades
+from vagas_hspm.storage import (
+    HistoricoBuscas,
+    carregar_especialidades,
+    carregar_selecionadas,
+    salvar_selecionadas,
+)
 
 
 def test_carregar_especialidades_ignora_linhas_vazias(tmp_path: Path) -> None:
@@ -49,3 +54,23 @@ def test_portal_verifica_se_esta_na_pagina_de_agendamento() -> None:
 
     page.url = "https://example.com/other"
     assert not asyncio.run(portal.esta_na_pagina_de_agendamento())
+
+
+def test_selecionadas_filtra_deduplica_e_preserva_ordem(tmp_path: Path) -> None:
+    caminho = tmp_path / "selecionadas.json"
+    salvar_selecionadas(caminho, ["Ortopedia", "Cardiologia", "Ortopedia", "Inexistente"], [
+        "Cardiologia",
+        "Ortopedia",
+    ])
+
+    assert carregar_selecionadas(caminho, ["Cardiologia", "Ortopedia"]) == [
+        "Ortopedia",
+        "Cardiologia",
+    ]
+
+
+def test_selecionadas_invalidas_retorna_todas(tmp_path: Path) -> None:
+    caminho = tmp_path / "selecionadas.json"
+    caminho.write_text("não é json", encoding="utf-8")
+
+    assert carregar_selecionadas(caminho, ["Cardiologia"]) == []

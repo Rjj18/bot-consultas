@@ -91,6 +91,7 @@ cp .env.example .env
 | `SENHA` | Senha para login automático | Não — só se quiser login automático |
 | `CDP_URL` | Endereço do Chrome com debug remoto | Não — padrão `http://localhost:9222` |
 | `TEMPO_ESPERA_MINUTOS` | Intervalo entre varreduras | Não — padrão `5` |
+| `ARQUIVO_SELECIONADAS` | Arquivo JSON da seleção feita pelo Telegram | Não — padrão `especialidades_selecionadas.json` |
 
 ### 3. Definir as especialidades monitoradas
 
@@ -107,6 +108,24 @@ Urologia
 
 O bot recarrega esse arquivo a cada ciclo — dá para editar com o bot já
 rodando, sem precisar reiniciar.
+
+## 📱 Controle pelo Telegram
+
+O monitoramento começa automaticamente quando o programa é iniciado. No
+Telegram, use:
+
+* `/parar` — pausa as buscas, mantendo o navegador e o bot conectados.
+* `/iniciar` — retoma e inicia uma nova varredura imediatamente.
+* `/especialidades` — abre o menu para selecionar as especialidades monitoradas.
+* `/status` — mostra se o monitoramento está ativo ou pausado.
+
+Os comandos aparecem no menu nativo do Telegram ao tocar em `/`. O comando
+`/ajuda` também mostra a lista diretamente em uma mensagem.
+
+A seleção é salva em `especialidades_selecionadas.json` e continua válida após
+reiniciar o programa. O arquivo `especialidades.txt` permanece sendo a lista
+base; especialidades removidas dele deixam de ser consideradas. Se todas forem
+selecionadas ou nenhuma seleção tiver sido salva, o bot monitora todas.
 
 ## 🚀 Como rodar
 

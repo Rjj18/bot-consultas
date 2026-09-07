@@ -1,9 +1,9 @@
 """Estruturas de dados do domínio da aplicação."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class StatusBusca(str, Enum):
+class StatusBusca(StrEnum):
     """Resultado possível de uma busca por vaga em uma especialidade."""
 
     SEM_VAGA = "SEM_VAGA"

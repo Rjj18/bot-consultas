@@ -1,4 +1,6 @@
-from vagas_hspm.monitor import MonitorState, _teclado_especialidades
+import asyncio
+
+from vagas_hspm.monitor import MonitorState, _aguardar_proxima_busca, _teclado_especialidades
 
 
 def test_monitor_state_pausa_e_retomada() -> None:
@@ -14,6 +16,20 @@ def test_monitor_state_pausa_e_retomada() -> None:
     assert estado.ativo
     assert estado.ativo_event.is_set()
     assert estado.acordar_event.is_set()
+
+
+def test_iniciar_acorda_busca_e_intervalo_continua_recorrente() -> None:
+    async def executar() -> None:
+        estado = MonitorState(ativo=False)
+        tarefa = asyncio.create_task(_aguardar_proxima_busca(estado, 60))
+        await asyncio.sleep(0)
+        estado.iniciar()
+        await asyncio.wait_for(tarefa, timeout=0.1)
+
+        estado.acordar_event.clear()
+        await asyncio.wait_for(_aguardar_proxima_busca(estado, 0.01), timeout=0.1)
+
+    asyncio.run(executar())
 
 
 def test_menu_tem_botoes_e_paginacao() -> None:

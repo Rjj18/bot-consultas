@@ -209,6 +209,20 @@ async def _enviar_menu(
     return message_id
 
 
+async def _aguardar_proxima_busca(estado: MonitorState, intervalo_segundos: float) -> None:
+    """Espera o intervalo, sem perder comandos de pausa ou retomada."""
+    while True:
+        if not estado.ativo:
+            await estado.ativo_event.wait()
+            return
+
+        estado.acordar_event.clear()
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(estado.acordar_event.wait(), timeout=intervalo_segundos)
+        if estado.ativo:
+            return
+
+
 async def _processar_eventos(
     telegram: TelegramClient,
     settings: Settings,
@@ -327,9 +341,11 @@ async def _loop_monitoramento(
         especialidades = estado.filtrar(especialidades_base)
         if not especialidades:
             logger.warning("Lista de especialidades vazia. Aguardando 1 minuto...")
-            estado.acordar_event.clear()
             with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(estado.acordar_event.wait(), timeout=60)
+                await asyncio.wait_for(
+                    _aguardar_proxima_busca(estado, settings.tempo_espera_minutos * 60),
+                    timeout=60,
+                )
             continue
 
         await page.bring_to_front()
@@ -351,11 +367,7 @@ async def _loop_monitoramento(
         )
         await _ciclo_de_busca(portal, telegram, historico, especialidades, estado)
         logger.info("Varredura concluída. Aguardando próxima busca...")
-        estado.acordar_event.clear()
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(
-                estado.acordar_event.wait(), timeout=settings.tempo_espera_minutos * 60
-            )
+        await _aguardar_proxima_busca(estado, settings.tempo_espera_minutos * 60)
 
 
 async def monitorar_vagas(settings: Settings) -> None:

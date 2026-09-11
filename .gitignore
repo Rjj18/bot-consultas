@@ -12,6 +12,9 @@ __pycache__/
 .coverage
 htmlcov/
 
+# Instruções locais do Copilot
+.github/copilot-instructions.md
+
 # Histórico de buscas e prints
 historico_buscas.csv
 print_*.png

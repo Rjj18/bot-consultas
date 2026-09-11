@@ -2,6 +2,16 @@
 .env.*
 !.env.example
 
+# Python e ferramentas de desenvolvimento
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
 # Histórico de buscas e prints
 historico_buscas.csv
 print_*.png

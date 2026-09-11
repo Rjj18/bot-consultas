@@ -109,9 +109,7 @@ def _texto_menu(especialidades: list[str], selecionadas: set[str], pagina: int) 
         + "\n".join(
             f"{indice + 1:02d} - {especialidade}"
             for indice, especialidade in enumerate(
-                especialidades[
-                    pagina * TAMANHO_PAGINA : (pagina + 1) * TAMANHO_PAGINA
-                ],
+                especialidades[pagina * TAMANHO_PAGINA : (pagina + 1) * TAMANHO_PAGINA],
                 pagina * TAMANHO_PAGINA,
             )
         )
@@ -225,6 +223,7 @@ async def _aguardar_proxima_busca(estado: MonitorState, intervalo_segundos: floa
 
 async def _processar_eventos(
     telegram: TelegramClient,
+    portal: PortalAgendamento,
     settings: Settings,
     estado: MonitorState,
 ) -> None:
@@ -237,9 +236,7 @@ async def _processar_eventos(
             comando = _nome_comando(evento.dados["texto"])
             if comando == "/parar":
                 estado.parar()
-                await telegram.enviar_mensagem(
-                    "⏸️ Buscas pausadas. Use /iniciar para retomar."
-                )
+                await telegram.enviar_mensagem("⏸️ Buscas pausadas. Use /iniciar para retomar.")
             elif comando == "/iniciar":
                 estado.iniciar()
                 await telegram.enviar_mensagem(
@@ -248,15 +245,11 @@ async def _processar_eventos(
             elif comando == "/especialidades":
                 base = carregar_especialidades(settings.arquivo_especialidades)
                 menu_selecao = {
-                    especialidade
-                    for especialidade in estado.selecionadas
-                    if especialidade in base
+                    especialidade for especialidade in estado.selecionadas if especialidade in base
                 }
                 menu_selecao = menu_selecao or set(base)
                 menu_pagina = 0
-                menu_message_id = await _enviar_menu(
-                    telegram, base, menu_selecao, menu_pagina
-                )
+                menu_message_id = await _enviar_menu(telegram, base, menu_selecao, menu_pagina)
             elif comando == "/ajuda":
                 await telegram.enviar_mensagem(
                     "Comandos disponíveis:\n"
@@ -267,7 +260,13 @@ async def _processar_eventos(
                 )
             elif comando == "/status":
                 status = "ativa" if estado.ativo else "pausada"
-                await telegram.enviar_mensagem(f"ℹ️ Monitoramento {status}.")
+                caminho_print = Path("print_status.png")
+                legenda = f"ℹ️ Monitoramento {status}."
+                tem_print = await portal.capturar_print(caminho_print)
+                if tem_print:
+                    await telegram.enviar_foto(caminho_print, legenda)
+                else:
+                    await telegram.enviar_mensagem(f"{legenda} (print indisponível)")
             else:
                 await telegram.enviar_mensagem(
                     "Comando não reconhecido. Use /ajuda para ver os comandos."
@@ -311,19 +310,13 @@ async def _processar_eventos(
             ]
             if len(estado.selecionadas) == len(base):
                 estado.selecionadas = []
-            salvar_selecionadas(
-                settings.arquivo_selecionadas, estado.selecionadas, base
-            )
+            salvar_selecionadas(settings.arquivo_selecionadas, estado.selecionadas, base)
             estado.acordar_event.set()
-            await telegram.enviar_mensagem(
-                "✅ Seleção salva. Use /iniciar para buscar agora."
-            )
+            await telegram.enviar_mensagem("✅ Seleção salva. Use /iniciar para buscar agora.")
             menu_selecao = None
             continue
         if menu_message_id is not None:
-            await _enviar_menu(
-                telegram, base, menu_selecao, menu_pagina, menu_message_id
-            )
+            await _enviar_menu(telegram, base, menu_selecao, menu_pagina, menu_message_id)
 
 
 async def _loop_monitoramento(
@@ -402,7 +395,9 @@ async def monitorar_vagas(settings: Settings) -> None:
             await telegram.iniciar_polling()
             await telegram.configurar_comandos()
             await telegram.enviar_mensagem("🤖 Robô iniciado! Monitorando vagas...")
-            tarefa_comandos = asyncio.create_task(_processar_eventos(telegram, settings, estado))
+            tarefa_comandos = asyncio.create_task(
+                _processar_eventos(telegram, portal, settings, estado)
+            )
             try:
                 await _loop_monitoramento(portal, page, telegram, historico, settings, estado)
             except Exception as e:

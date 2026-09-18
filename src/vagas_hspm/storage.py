@@ -17,20 +17,15 @@ class HistoricoBuscas:
     def __init__(self, caminho: Path) -> None:
         self._caminho = caminho
 
-    def registrar(self, especialidade: str, status: StatusBusca, quantidade_vagas: int = 0) -> None:
+    def registrar(self, especialidade: str, status: StatusBusca) -> None:
         arquivo_existe = self._caminho.exists()
         try:
             with self._caminho.open(mode="a", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
                 if not arquivo_existe:
-                    writer.writerow(["data_hora", "especialidade", "status", "quantidade_vagas"])
+                    writer.writerow(["data_hora", "especialidade", "status"])
                 writer.writerow(
-                    [
-                        datetime.now().isoformat(timespec="seconds"),
-                        especialidade,
-                        status.value,
-                        quantidade_vagas,
-                    ]
+                    [datetime.now().isoformat(timespec="seconds"), especialidade, status.value]
                 )
         except OSError as e:
             logger.error("Erro ao salvar histórico em CSV: %s", e)

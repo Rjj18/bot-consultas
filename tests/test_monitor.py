@@ -1,13 +1,11 @@
 import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 from vagas_hspm.config import Settings
-from vagas_hspm.models import StatusBusca
 from vagas_hspm.monitor import (
     MonitorState,
     _aguardar_proxima_busca,
-    _ciclo_de_busca,
     _processar_eventos,
     _teclado_especialidades,
 )
@@ -53,17 +51,6 @@ def test_menu_tem_botoes_e_paginacao() -> None:
     assert any(botao["callback_data"] == "esp:c" for botao in botoes)
 
 
-def test_menu_exibe_toggle_de_print() -> None:
-    ligado = _teclado_especialidades(["Cardiologia"], {"Cardiologia"}, 0, True)
-    desligado = _teclado_especialidades(["Cardiologia"], {"Cardiologia"}, 0, False)
-
-    botoes_ligado = [botao for linha in ligado["inline_keyboard"] for botao in linha]
-    botoes_desligado = [botao for linha in desligado["inline_keyboard"] for botao in linha]
-
-    assert {botao["text"] for botao in botoes_ligado} & {"🖼️ Print: ligado"}
-    assert {botao["text"] for botao in botoes_desligado} & {"🖼️ Print: desligado"}
-
-
 def test_status_envia_print_da_pagina_atual() -> None:
     async def executar() -> None:
         telegram = AsyncMock()
@@ -95,44 +82,5 @@ def test_status_envia_print_da_pagina_atual() -> None:
             Path("print_status.png"), "ℹ️ Monitoramento ativa."
         )
         telegram.enviar_mensagem.assert_not_awaited()
-
-    asyncio.run(executar())
-
-
-def test_mapeia_detalhes_apenas_quando_encontra_vaga() -> None:
-    async def executar() -> None:
-        telegram = AsyncMock()
-        historico = Mock()
-        estado = MonitorState()
-        portal = AsyncMock()
-        portal.deslogou_agora.return_value = False
-        portal.buscar_especialidade.side_effect = [
-            StatusBusca.SEM_VAGA,
-            StatusBusca.VAGA_ENCONTRADA,
-        ]
-        portal.mapear_vagas.return_value = [
-            {
-                "mes": "setembro",
-                "quantidade": "1 vagas",
-                "horario": "14:10",
-                "medico": "Dr. Teste",
-            }
-        ]
-        portal.capturar_print.return_value = False
-
-        await _ciclo_de_busca(
-            portal,
-            telegram,
-            historico,
-            ["Cardiologia", "Ortopedia"],
-            estado,
-        )
-
-        portal.mapear_vagas.assert_awaited_once_with()
-        historico.registrar.assert_any_call("Cardiologia", StatusBusca.SEM_VAGA, 0)
-        historico.registrar.assert_any_call("Ortopedia", StatusBusca.VAGA_ENCONTRADA, 1)
-        assert any(
-            "14:10" in chamada.args[0] for chamada in telegram.enviar_mensagem.await_args_list
-        )
 
     asyncio.run(executar())

@@ -2,7 +2,6 @@
 
 import contextlib
 import logging
-from datetime import datetime
 from pathlib import Path
 
 from playwright.async_api import Page
@@ -13,20 +12,6 @@ from .models import StatusBusca
 logger = logging.getLogger(__name__)
 
 SELETOR_BOTAO_ENTRAR = "button:has-text('ENTRAR')"
-NOMES_MESES = (
-    "janeiro",
-    "fevereiro",
-    "março",
-    "abril",
-    "maio",
-    "junho",
-    "julho",
-    "agosto",
-    "setembro",
-    "outubro",
-    "novembro",
-    "dezembro",
-)
 
 
 class PortalAgendamento:
@@ -134,53 +119,3 @@ class PortalAgendamento:
         except PlaywrightTimeoutError:
             await self._page.reload()
             await self._page.wait_for_load_state("networkidle")
-
-    async def mapear_vagas(self, agora: datetime | None = None) -> list[dict[str, str]]:
-        """Mapeia as vagas do mês atual e do mês seguinte.
-
-        Para cada evento do calendário, abre a tabela de detalhes e retorna o
-        horário e o profissional da primeira linha encontrada.
-        """
-        data_atual = agora or datetime.now()
-        resultados: list[dict[str, str]] = []
-        mes_atual = data_atual.month
-        mes_seguinte = mes_atual % 12 + 1
-
-        resultados.extend(await self._mapear_mes(NOMES_MESES[mes_atual - 1]))
-        await self._page.locator("button.rz-next").click()
-        await self._page.wait_for_timeout(1500)
-        resultados.extend(await self._mapear_mes(NOMES_MESES[mes_seguinte - 1]))
-        return resultados
-
-    async def _mapear_mes(self, mes: str) -> list[dict[str, str]]:
-        calendario = self._page.locator(".rz-scheduler")
-        await calendario.wait_for(state="visible")
-        eventos = calendario.locator(".rz-event-content")
-        resultados: list[dict[str, str]] = []
-
-        for indice in range(await eventos.count()):
-            evento = eventos.nth(indice)
-            quantidade = (await evento.inner_text()).strip()
-            await evento.click()
-
-            tabela = self._page.locator(".rz-grid-table")
-            await tabela.wait_for(state="visible")
-            linha = tabela.locator("tbody tr").first
-            await linha.wait_for(state="visible")
-            colunas = linha.locator("td")
-            try:
-                horario = (await colunas.nth(1).inner_text()).strip()
-                medico = (await colunas.nth(5).inner_text()).strip()
-                resultados.append(
-                    {
-                        "mes": mes,
-                        "quantidade": quantidade,
-                        "horario": horario,
-                        "medico": medico,
-                    }
-                )
-            finally:
-                await self._page.keyboard.press("Escape")
-                await calendario.focus()
-
-        return resultados

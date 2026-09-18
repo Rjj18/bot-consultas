@@ -38,11 +38,11 @@ def test_historico_registra_e_cria_cabecalho(tmp_path: Path) -> None:
     caminho = tmp_path / "historico.csv"
     historico = HistoricoBuscas(caminho)
 
-    historico.registrar("Cardiologia", StatusBusca.SEM_VAGA, 0)
+    historico.registrar("Cardiologia", StatusBusca.SEM_VAGA)
 
     conteudo = caminho.read_text(encoding="utf-8")
-    assert "data_hora,especialidade,status,quantidade_vagas" in conteudo
-    assert "Cardiologia,SEM_VAGA,0" in conteudo
+    assert "data_hora,especialidade,status" in conteudo
+    assert "Cardiologia,SEM_VAGA" in conteudo
 
 
 def test_portal_verifica_se_esta_na_pagina_de_agendamento() -> None:
@@ -58,14 +58,10 @@ def test_portal_verifica_se_esta_na_pagina_de_agendamento() -> None:
 
 def test_selecionadas_filtra_deduplica_e_preserva_ordem(tmp_path: Path) -> None:
     caminho = tmp_path / "selecionadas.json"
-    salvar_selecionadas(
-        caminho,
-        ["Ortopedia", "Cardiologia", "Ortopedia", "Inexistente"],
-        [
-            "Cardiologia",
-            "Ortopedia",
-        ],
-    )
+    salvar_selecionadas(caminho, ["Ortopedia", "Cardiologia", "Ortopedia", "Inexistente"], [
+        "Cardiologia",
+        "Ortopedia",
+    ])
 
     assert carregar_selecionadas(caminho, ["Cardiologia", "Ortopedia"]) == [
         "Ortopedia",

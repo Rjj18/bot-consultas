@@ -3,6 +3,7 @@
 import asyncio
 import contextlib
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -32,6 +33,7 @@ class MonitorState:
 
     selecionadas: list[str] = field(default_factory=list)
     ativo: bool = True
+    enviar_print_vaga: bool = True
     ativo_event: asyncio.Event = field(default_factory=asyncio.Event)
     acordar_event: asyncio.Event = field(default_factory=asyncio.Event)
 
@@ -65,7 +67,10 @@ def _nome_comando(texto: str) -> str:
 
 
 def _teclado_especialidades(
-    especialidades: list[str], selecionadas: set[str], pagina: int
+    especialidades: list[str],
+    selecionadas: set[str],
+    pagina: int,
+    enviar_print_vaga: bool = True,
 ) -> dict[str, Any]:
     total_paginas = max(1, (len(especialidades) + TAMANHO_PAGINA - 1) // TAMANHO_PAGINA)
     pagina = max(0, min(pagina, total_paginas - 1))
@@ -96,6 +101,8 @@ def _teclado_especialidades(
             {"text": "✅ Confirmar", "callback_data": "esp:c"},
         ]
     )
+    print_status = "ligado" if enviar_print_vaga else "desligado"
+    botoes.append([{"text": f"🖼️ Print: {print_status}", "callback_data": "esp:print"}])
     return {"inline_keyboard": botoes}
 
 
@@ -114,6 +121,28 @@ def _texto_menu(especialidades: list[str], selecionadas: set[str], pagina: int) 
             )
         )
         + "\n\nToque nos números para alternar a seleção."
+    )
+
+
+def _texto_vagas(especialidade: str, vagas: list[dict[str, str]]) -> str:
+    linhas = [f"🚨 VAGAS LIBERADAS: {especialidade}"]
+    if not vagas:
+        linhas.append("Não foi possível obter os detalhes das vagas.")
+    else:
+        linhas.extend(
+            f"{vaga['mes']}: {vaga['quantidade']} - {vaga['horario']} - {vaga['medico']}"
+            for vaga in vagas
+        )
+    return "\n".join(linhas)
+
+
+def _quantidade_vagas(vagas: list[dict[str, str]]) -> int:
+    """Soma as quantidades exibidas nos eventos do calendário."""
+    return sum(
+        int(match.group())
+        for vaga in vagas
+        for match in [re.search(r"\d+", vaga.get("quantidade", ""))]
+        if match
     )
 
 
@@ -175,19 +204,28 @@ async def _ciclo_de_busca(
             await portal.limpar_filtro()
             continue
 
-        historico.registrar(especialidade, status)
-
+        vagas: list[dict[str, str]] = []
         if status is StatusBusca.SEM_VAGA:
             logger.info("Sem vagas para %s.", especialidade)
         else:
             logger.info("VAGA ENCONTRADA PARA %s!", especialidade)
-            caminho = Path(f"vaga_{especialidade.replace(' ', '_')}.png")
-            tem_print = await portal.capturar_print(caminho)
-            legenda = f"🚨 VAGA LIBERADA: {especialidade}! Corra para o site!"
-            if tem_print:
-                await telegram.enviar_foto(caminho, legenda)
-            else:
-                await telegram.enviar_mensagem(legenda)
+            try:
+                vagas = await portal.mapear_vagas()
+            except Exception as e:
+                logger.error("Erro ao mapear vagas de %s: %s", especialidade, e)
+            historico.registrar(especialidade, status, _quantidade_vagas(vagas))
+            await telegram.enviar_mensagem(_texto_vagas(especialidade, vagas))
+            legenda = f"🚨 VAGA LIBERADA: {especialidade}!"
+            if estado.enviar_print_vaga:
+                caminho = Path(f"vaga_{especialidade.replace(' ', '_')}.png")
+                tem_print = await portal.capturar_print(caminho)
+                if tem_print:
+                    await telegram.enviar_foto(caminho, legenda)
+                else:
+                    await telegram.enviar_mensagem(legenda)
+
+        if status is StatusBusca.SEM_VAGA:
+            historico.registrar(especialidade, status, 0)
 
         await portal.limpar_filtro()
 
@@ -197,10 +235,13 @@ async def _enviar_menu(
     especialidades: list[str],
     selecionadas: set[str],
     pagina: int,
+    estado: MonitorState,
     message_id: int | None = None,
 ) -> int | None:
     texto = _texto_menu(especialidades, selecionadas, pagina)
-    teclado = _teclado_especialidades(especialidades, selecionadas, pagina)
+    teclado = _teclado_especialidades(
+        especialidades, selecionadas, pagina, estado.enviar_print_vaga
+    )
     if message_id is None:
         return await telegram.enviar_mensagem(texto, teclado)
     await telegram.editar_mensagem(message_id, texto, teclado)
@@ -249,7 +290,9 @@ async def _processar_eventos(
                 }
                 menu_selecao = menu_selecao or set(base)
                 menu_pagina = 0
-                menu_message_id = await _enviar_menu(telegram, base, menu_selecao, menu_pagina)
+                menu_message_id = await _enviar_menu(
+                    telegram, base, menu_selecao, menu_pagina, estado
+                )
             elif comando == "/ajuda":
                 await telegram.enviar_mensagem(
                     "Comandos disponíveis:\n"
@@ -286,7 +329,9 @@ async def _processar_eventos(
         if menu_selecao is None:
             menu_selecao = set(estado.selecionadas) or set(base)
         partes = dados.split(":")
-        if len(partes) == 3 and partes[1] == "t":
+        if dados == "esp:print":
+            estado.enviar_print_vaga = not estado.enviar_print_vaga
+        elif len(partes) == 3 and partes[1] == "t":
             try:
                 indice = int(partes[2])
             except ValueError:
@@ -316,7 +361,7 @@ async def _processar_eventos(
             menu_selecao = None
             continue
         if menu_message_id is not None:
-            await _enviar_menu(telegram, base, menu_selecao, menu_pagina, menu_message_id)
+            await _enviar_menu(telegram, base, menu_selecao, menu_pagina, estado, menu_message_id)
 
 
 async def _loop_monitoramento(

@@ -17,6 +17,7 @@ htmlcov/
 
 # Histórico de buscas e prints
 historico_buscas.csv
+especialidades_selecionadas.json
 print_*.png
 vaga_*.png
 *.png

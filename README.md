@@ -41,8 +41,12 @@ vagas-hspm/
 │       ├── browser.py          # automação da página (Playwright)
 │       └── monitor.py          # orquestração do loop principal
 ├── tests/
-│   └── test_storage.py
+│   ├── test_browser.py
+│   ├── test_monitor.py
+│   ├── test_storage.py
+│   └── test_telegram_client.py
 ├── especialidades.txt          # lista monitorada, uma especialidade por linha
+├── preferencias.json           # preferência local de envio de prints
 ├── .env.example
 ├── .gitignore
 ├── .pre-commit-config.yaml
@@ -92,6 +96,7 @@ cp .env.example .env
 | `CDP_URL` | Endereço do Chrome com debug remoto | Não — padrão `http://localhost:9222` |
 | `TEMPO_ESPERA_MINUTOS` | Intervalo entre varreduras | Não — padrão `5` |
 | `ARQUIVO_SELECIONADAS` | Arquivo JSON da seleção feita pelo Telegram | Não — padrão `especialidades_selecionadas.json` |
+| `ARQUIVO_PREFERENCIAS` | Arquivo JSON das preferências do monitor | Não — padrão `preferencias.json` |
 
 ### 3. Definir as especialidades monitoradas
 
@@ -126,6 +131,18 @@ A seleção é salva em `especialidades_selecionadas.json` e continua válida ap
 reiniciar o programa. O arquivo `especialidades.txt` permanece sendo a lista
 base; especialidades removidas dele deixam de ser consideradas. Se todas forem
 selecionadas ou nenhuma seleção tiver sido salva, o bot monitora todas.
+
+Ao abrir `/especialidades`, use o botão `Print: ligado/desligado` para controlar
+o envio de uma captura de tela quando uma vaga for encontrada. A preferência é
+salva em `preferencias.json` e fica ligada por padrão. Mesmo com o print
+desligado, o alerta textual e os detalhes das vagas continuam sendo enviados.
+
+Quando encontra uma vaga, o bot consulta o mês atual e o mês seguinte e envia
+os detalhes no formato:
+
+```text
+- 25 de setembro: 2 vagas | 13:40 | NOME DO PROFISSIONAL
+```
 
 ## 🚀 Como rodar
 
@@ -179,7 +196,10 @@ a cada push/pull request.
 - ✅ Monitoramento automático e periódico de múltiplas especialidades
 - ✅ Detecção de sessão expirada com recuperação de CAPTCHA via Telegram
 - ✅ Login automático com CPF e senha (opcional)
-- ✅ Alertas em tempo real no Telegram, com print da tela quando encontra vaga
+- ✅ Alertas em tempo real no Telegram, com print opcional quando encontra vaga
+- ✅ Detalhamento das vagas do mês atual e do mês seguinte, incluindo data,
+  quantidade, horário e profissional
+- ✅ Controle de envio de prints pelo menu de especialidades
 - ✅ Histórico de buscas em CSV (`historico_buscas.csv`)
 - ✅ Lista de especialidades editável em runtime, sem reiniciar o bot
 - ✅ Configuração validada na inicialização (falha cedo se faltar algo)

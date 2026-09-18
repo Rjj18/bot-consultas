@@ -2,9 +2,11 @@
 
 import contextlib
 import logging
+from datetime import datetime
 from pathlib import Path
+from typing import TypedDict
 
-from playwright.async_api import Page
+from playwright.async_api import Locator, Page
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from .models import StatusBusca
@@ -12,6 +14,14 @@ from .models import StatusBusca
 logger = logging.getLogger(__name__)
 
 SELETOR_BOTAO_ENTRAR = "button:has-text('ENTRAR')"
+
+
+class VagaDetalhada(TypedDict):
+    mes: str
+    data: str
+    quantidade: str
+    horario: str
+    medico: str
 
 
 class PortalAgendamento:
@@ -119,3 +129,73 @@ class PortalAgendamento:
         except PlaywrightTimeoutError:
             await self._page.reload()
             await self._page.wait_for_load_state("networkidle")
+
+    async def mapear_vagas_dois_meses(self) -> list[VagaDetalhada]:
+        """Mapeia as vagas exibidas no mês atual e no mês seguinte."""
+        agora = datetime.now()
+        meses = (agora.month, agora.month % 12 + 1)
+        nomes_meses = (
+            "janeiro",
+            "fevereiro",
+            "março",
+            "abril",
+            "maio",
+            "junho",
+            "julho",
+            "agosto",
+            "setembro",
+            "outubro",
+            "novembro",
+            "dezembro",
+        )
+        resultados: list[VagaDetalhada] = []
+
+        for indice_mes, numero_mes in enumerate(meses):
+            resultados.extend(
+                await self._mapear_vagas_mes(nomes_meses[numero_mes - 1])
+            )
+            if indice_mes == 0:
+                botao_proximo = self._page.locator("button.rz-next").first
+                await botao_proximo.wait_for(state="visible", timeout=5000)
+                await botao_proximo.scroll_into_view_if_needed()
+                await botao_proximo.click()
+                await self._page.wait_for_timeout(1500)
+
+        return resultados
+
+    async def _mapear_vagas_mes(self, mes: str) -> list[VagaDetalhada]:
+        calendario = self._page.locator(".rz-scheduler")
+        eventos = calendario.locator(".rz-event-content")
+        resultados: list[VagaDetalhada] = []
+
+        for indice in range(await eventos.count()):
+            evento = eventos.nth(indice)
+            quantidade = (await evento.inner_text()).strip()
+            dia = await self._extrair_dia_da_vaga(evento)
+            await evento.click()
+
+            tabela = self._page.locator(".rz-grid-table")
+            await tabela.wait_for(state="visible")
+            linha = tabela.locator("tbody tr").first
+            await linha.wait_for(state="visible")
+            colunas = linha.locator("td")
+            resultados.append(
+                {
+                    "mes": mes,
+                    "data": f"{dia} de {mes}",
+                    "quantidade": quantidade,
+                    "horario": (await colunas.nth(1).inner_text()).strip(),
+                    "medico": (await colunas.nth(5).inner_text()).strip(),
+                }
+            )
+
+            await self._page.keyboard.press("Escape")
+            await calendario.wait_for(state="visible")
+
+        return resultados
+
+    async def _extrair_dia_da_vaga(self, evento: Locator) -> str:
+        titulo_do_dia = evento.locator(
+            "xpath=ancestor::*[.//div[contains(@class, 'rz-slot-title')]][1]"
+        ).locator(".rz-slot-title").first
+        return (await titulo_do_dia.inner_text()).strip()

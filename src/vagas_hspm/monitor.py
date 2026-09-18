@@ -189,6 +189,22 @@ async def _ciclo_de_busca(
             else:
                 await telegram.enviar_mensagem(legenda)
 
+            try:
+                vagas = await portal.mapear_vagas_dois_meses()
+                if vagas:
+                    detalhes = "\n".join(
+                        f"- {vaga['data']} ({vaga['mes']}): {vaga['quantidade']} | "
+                        f"{vaga['horario']} | {vaga['medico']}"
+                        for vaga in vagas
+                    )
+                    await telegram.enviar_mensagem(
+                        f"📅 Detalhes das vagas de {especialidade}:\n{detalhes}"
+                    )
+                else:
+                    logger.info("Nenhum detalhe de vaga retornado para %s.", especialidade)
+            except Exception as e:
+                logger.error("Erro ao mapear detalhes de %s: %s", especialidade, e)
+
         await portal.limpar_filtro()
 
 

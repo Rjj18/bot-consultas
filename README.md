@@ -27,9 +27,9 @@ alertas em tempo real via Telegram quando encontra horários disponíveis.
 vagas-hspm/
 ├── .devcontainer/
 │   └── devcontainer.json
-├── .github/
-│   └── workflows/
-│       └── ci.yml
+├── .env.example
+├── .gitignore
+├── .pre-commit-config.yaml
 ├── src/
 │   └── vagas_hspm/
 │       ├── __init__.py
@@ -41,13 +41,14 @@ vagas-hspm/
 │       ├── browser.py          # automação da página (Playwright)
 │       └── monitor.py          # orquestração do loop principal
 ├── tests/
-│   └── test_storage.py
+│   ├── test_browser.py
+│   ├── test_monitor.py
+│   ├── test_storage.py
+│   └── test_telegram_client.py
 ├── especialidades.txt          # lista monitorada, uma especialidade por linha
-├── .env.example
-├── .gitignore
-├── .pre-commit-config.yaml
 ├── Dockerfile
 ├── pyproject.toml
+├── uv.lock
 └── README.md
 ```
 
@@ -91,7 +92,9 @@ cp .env.example .env
 | `SENHA` | Senha para login automático | Não — só se quiser login automático |
 | `CDP_URL` | Endereço do Chrome com debug remoto | Não — padrão `http://localhost:9222` |
 | `TEMPO_ESPERA_MINUTOS` | Intervalo entre varreduras | Não — padrão `5` |
+| `ARQUIVO_ESPECIALIDADES` | Caminho do arquivo com a lista-base | Não — padrão `especialidades.txt` |
 | `ARQUIVO_SELECIONADAS` | Arquivo JSON da seleção feita pelo Telegram | Não — padrão `especialidades_selecionadas.json` |
+| `ARQUIVO_HISTORICO` | Caminho do histórico de buscas em CSV | Não — padrão `historico_buscas.csv` |
 
 ### 3. Definir as especialidades monitoradas
 
@@ -126,6 +129,9 @@ A seleção é salva em `especialidades_selecionadas.json` e continua válida ap
 reiniciar o programa. O arquivo `especialidades.txt` permanece sendo a lista
 base; especialidades removidas dele deixam de ser consideradas. Se todas forem
 selecionadas ou nenhuma seleção tiver sido salva, o bot monitora todas.
+
+O botão `Print` no menu de especialidades alterna o envio de imagens quando uma
+vaga é encontrada. A opção fica preservada apenas durante a execução atual.
 
 ## 🚀 Como rodar
 
@@ -181,8 +187,24 @@ a cada push/pull request.
 - ✅ Login automático com CPF e senha (opcional)
 - ✅ Alertas em tempo real no Telegram, com print da tela quando encontra vaga
 - ✅ Histórico de buscas em CSV (`historico_buscas.csv`)
+- ✅ Registro da quantidade de vagas encontradas por especialidade
 - ✅ Lista de especialidades editável em runtime, sem reiniciar o bot
 - ✅ Configuração validada na inicialização (falha cedo se faltar algo)
+
+### Histórico CSV
+
+Cada busca acrescenta uma linha ao histórico com as colunas:
+
+| Coluna | Conteúdo |
+|---|---|
+| `data_hora` | Data e hora da busca |
+| `especialidade` | Especialidade pesquisada |
+| `status` | `SEM_VAGA` ou `VAGA_ENCONTRADA` |
+| `quantidade_vagas` | Soma das vagas exibidas para o mês atual e o seguinte; `0` quando não há vaga |
+
+O arquivo de histórico e o JSON de especialidades selecionadas são dados locais
+e estão no `.gitignore`. O histórico existente pode conter quantidade vazia em
+registros antigos de `VAGA_ENCONTRADA`, quando esse dado ainda não era salvo.
 
 ## 📱 Configurar o bot do Telegram
 

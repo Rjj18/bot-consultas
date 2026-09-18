@@ -69,3 +69,26 @@ def salvar_selecionadas(caminho: Path, selecionadas: list[str], especialidades: 
         )
     except OSError as e:
         logger.error("Erro ao salvar seleção de especialidades: %s", e)
+
+
+def carregar_enviar_print(caminho: Path) -> bool:
+    """Carrega a preferência de envio de print; ligado por padrão."""
+    if not caminho.exists():
+        return True
+    try:
+        dados = json.loads(caminho.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        logger.warning("Não foi possível ler as preferências: %s", e)
+        return True
+    return dados.get("enviar_print", True) if isinstance(dados, dict) else True
+
+
+def salvar_enviar_print(caminho: Path, enviar: bool) -> None:
+    """Persiste a preferência de envio de print."""
+    try:
+        caminho.write_text(
+            json.dumps({"enviar_print": enviar}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as e:
+        logger.error("Erro ao salvar preferências: %s", e)

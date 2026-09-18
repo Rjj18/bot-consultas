@@ -15,8 +15,10 @@ from .config import Settings
 from .models import StatusBusca
 from .storage import (
     HistoricoBuscas,
+    carregar_enviar_print,
     carregar_especialidades,
     carregar_selecionadas,
+    salvar_enviar_print,
     salvar_selecionadas,
 )
 from .telegram_client import TelegramClient
@@ -31,6 +33,7 @@ class MonitorState:
     """Estado compartilhado entre o controlador do Telegram e a busca."""
 
     selecionadas: list[str] = field(default_factory=list)
+    enviar_print: bool = True
     ativo: bool = True
     ativo_event: asyncio.Event = field(default_factory=asyncio.Event)
     acordar_event: asyncio.Event = field(default_factory=asyncio.Event)
@@ -65,7 +68,10 @@ def _nome_comando(texto: str) -> str:
 
 
 def _teclado_especialidades(
-    especialidades: list[str], selecionadas: set[str], pagina: int
+    especialidades: list[str],
+    selecionadas: set[str],
+    pagina: int,
+    enviar_print: bool = True,
 ) -> dict[str, Any]:
     total_paginas = max(1, (len(especialidades) + TAMANHO_PAGINA - 1) // TAMANHO_PAGINA)
     pagina = max(0, min(pagina, total_paginas - 1))
@@ -93,13 +99,23 @@ def _teclado_especialidades(
     botoes.append(
         [
             {"text": "✅ Todas", "callback_data": "esp:l"},
+            {
+                "text": f"{'🖼️' if enviar_print else '🚫'} Print: "
+                f"{'ligado' if enviar_print else 'desligado'}",
+                "callback_data": "esp:print",
+            },
             {"text": "✅ Confirmar", "callback_data": "esp:c"},
         ]
     )
     return {"inline_keyboard": botoes}
 
 
-def _texto_menu(especialidades: list[str], selecionadas: set[str], pagina: int) -> str:
+def _texto_menu(
+    especialidades: list[str],
+    selecionadas: set[str],
+    pagina: int,
+    enviar_print: bool = True,
+) -> str:
     total = len(especialidades)
     quantidade = len(selecionadas)
     resumo = "todas" if quantidade == total else f"{quantidade} de {total}"
@@ -113,7 +129,8 @@ def _texto_menu(especialidades: list[str], selecionadas: set[str], pagina: int) 
                 pagina * TAMANHO_PAGINA,
             )
         )
-        + "\n\nToque nos números para alternar a seleção."
+        + "\n\nToque nos números para alternar a seleção.\n"
+        + f"Print ao encontrar vaga: {'ligado' if enviar_print else 'desligado'}."
     )
 
 
@@ -182,10 +199,13 @@ async def _ciclo_de_busca(
         else:
             logger.info("VAGA ENCONTRADA PARA %s!", especialidade)
             caminho = Path(f"vaga_{especialidade.replace(' ', '_')}.png")
-            tem_print = await portal.capturar_print(caminho)
             legenda = f"🚨 VAGA LIBERADA: {especialidade}! Corra para o site!"
-            if tem_print:
-                await telegram.enviar_foto(caminho, legenda)
+            if estado.enviar_print:
+                tem_print = await portal.capturar_print(caminho)
+                if tem_print:
+                    await telegram.enviar_foto(caminho, legenda)
+                else:
+                    await telegram.enviar_mensagem(legenda)
             else:
                 await telegram.enviar_mensagem(legenda)
 
@@ -214,9 +234,10 @@ async def _enviar_menu(
     selecionadas: set[str],
     pagina: int,
     message_id: int | None = None,
+    enviar_print: bool = True,
 ) -> int | None:
-    texto = _texto_menu(especialidades, selecionadas, pagina)
-    teclado = _teclado_especialidades(especialidades, selecionadas, pagina)
+    texto = _texto_menu(especialidades, selecionadas, pagina, enviar_print)
+    teclado = _teclado_especialidades(especialidades, selecionadas, pagina, enviar_print)
     if message_id is None:
         return await telegram.enviar_mensagem(texto, teclado)
     await telegram.editar_mensagem(message_id, texto, teclado)
@@ -265,7 +286,9 @@ async def _processar_eventos(
                 }
                 menu_selecao = menu_selecao or set(base)
                 menu_pagina = 0
-                menu_message_id = await _enviar_menu(telegram, base, menu_selecao, menu_pagina)
+                menu_message_id = await _enviar_menu(
+                    telegram, base, menu_selecao, menu_pagina, enviar_print=estado.enviar_print
+                )
             elif comando == "/ajuda":
                 await telegram.enviar_mensagem(
                     "Comandos disponíveis:\n"
@@ -320,6 +343,9 @@ async def _processar_eventos(
                 continue
         elif dados == "esp:l":
             menu_selecao = set(base)
+        elif dados == "esp:print":
+            estado.enviar_print = not estado.enviar_print
+            salvar_enviar_print(settings.arquivo_preferencias, estado.enviar_print)
         elif dados == "esp:c":
             estado.selecionadas = [
                 especialidade for especialidade in base if especialidade in menu_selecao
@@ -332,7 +358,14 @@ async def _processar_eventos(
             menu_selecao = None
             continue
         if menu_message_id is not None:
-            await _enviar_menu(telegram, base, menu_selecao, menu_pagina, menu_message_id)
+            await _enviar_menu(
+                telegram,
+                base,
+                menu_selecao,
+                menu_pagina,
+                menu_message_id,
+                estado.enviar_print,
+            )
 
 
 async def _loop_monitoramento(
@@ -384,7 +417,10 @@ async def monitorar_vagas(settings: Settings) -> None:
     telegram = TelegramClient(settings.telegram_token, settings.chat_id)
     historico = HistoricoBuscas(settings.arquivo_historico)
     base = carregar_especialidades(settings.arquivo_especialidades)
-    estado = MonitorState(carregar_selecionadas(settings.arquivo_selecionadas, base))
+    estado = MonitorState(
+        selecionadas=carregar_selecionadas(settings.arquivo_selecionadas, base),
+        enviar_print=carregar_enviar_print(settings.arquivo_preferencias),
+    )
 
     async with async_playwright() as p:
         logger.info("Conectando ao navegador na porta 9222...")

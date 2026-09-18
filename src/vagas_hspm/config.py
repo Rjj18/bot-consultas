@@ -26,4 +26,5 @@ class Settings(BaseSettings):
     tempo_espera_minutos: int = 5
     arquivo_especialidades: Path = Path("especialidades.txt")
     arquivo_selecionadas: Path = Path("especialidades_selecionadas.json")
+    arquivo_preferencias: Path = Path("preferencias.json")
     arquivo_historico: Path = Path("historico_buscas.csv")

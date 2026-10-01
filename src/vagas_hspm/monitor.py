@@ -373,9 +373,16 @@ async def monitorar_vagas(settings: Settings) -> None:
     async with async_playwright() as p:
         logger.info("Conectando ao navegador na porta 9222...")
         try:
-            browser = await p.chromium.connect_over_cdp(settings.cdp_url)
+            browser = await p.chromium.connect_over_cdp(
+                settings.cdp_url, timeout=settings.cdp_timeout_segundos * 1000
+            )
         except Exception as e:
-            logger.error("Erro crítico de conexão com o navegador: %s", e)
+            logger.error(
+                "Erro crítico de conexão com o navegador em %s: %s. "
+                "Confirme que o Chrome foi iniciado com --remote-debugging-port=9222.",
+                settings.cdp_url,
+                e,
+            )
             await telegram.enviar_mensagem(f"❌ Erro crítico de conexão com o navegador: {e}")
             await telegram.fechar()
             return

@@ -90,6 +90,7 @@ cp .env.example .env
 | `CPF` | CPF para login automático | Não — só se quiser login automático |
 | `SENHA` | Senha para login automático | Não — só se quiser login automático |
 | `CDP_URL` | Endereço do Chrome com debug remoto | Não — padrão `http://localhost:9222` |
+| `CDP_TIMEOUT_SEGUNDOS` | Tempo máximo para conectar ao Chrome | Não — padrão `10` |
 | `TEMPO_ESPERA_MINUTOS` | Intervalo entre varreduras | Não — padrão `5` |
 | `ARQUIVO_SELECIONADAS` | Arquivo JSON da seleção feita pelo Telegram | Não — padrão `especialidades_selecionadas.json` |
 

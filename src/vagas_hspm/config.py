@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     telegram_token: str
     chat_id: str
     cdp_url: str = "http://localhost:9222"
+    cdp_timeout_segundos: float = 10
 
     # Opcionais: só usados se o login exigir preencher CPF/senha explicitamente.
     cpf: str | None = None

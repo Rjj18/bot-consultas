@@ -1,13 +1,16 @@
+Aqui está o seu `README.md` atualizado com uma nova seção dedicada a **Colaborações e Contribuições**, detalhando os padrões de criação de branches e mensagens de commit baseadas no *Conventional Commits*.
+
+Inseri a nova seção logo após o "Fluxo de desenvolvimento", pois complementa perfeitamente as rotinas de `pre-commit` e CI/CD.
+
+---
+
 # Bot de Agendamento HSPM 🤖🏥
 
 **Descrição curta (PT):** Um bot Python para monitoramento de vagas de consultas e envio de alertas via Telegram.
 
 **Short description (EN):** A Python bot to monitor medical appointment openings and send alerts via Telegram.
 
-Automação em Python que monitora vagas de consultas médicas em múltiplas
-especialidades no portal do Hospital do Servidor Público Municipal (HSPM).
-Usa Playwright para controlar uma sessão do Chrome já logada, e envia
-alertas em tempo real via Telegram quando encontra horários disponíveis.
+Automação em Python que monitora vagas de consultas médicas em múltiplas especialidades no portal do Hospital do Servidor Público Municipal (HSPM). Usa Playwright para controlar uma sessão do Chrome já logada, e envia alertas em tempo real via Telegram quando encontra horários disponíveis.
 
 ## 🛠️ Stack
 
@@ -23,7 +26,7 @@ alertas em tempo real via Telegram quando encontra horários disponíveis.
 
 ## 📁 Estrutura do projeto
 
-```
+```text
 vagas-hspm/
 ├── .devcontainer/
 │   └── devcontainer.json
@@ -53,41 +56,39 @@ vagas-hspm/
 ├── Dockerfile
 ├── pyproject.toml
 └── README.md
+
 ```
 
 ## ⚙️ Pré-requisitos
 
-* [Docker](https://docs.docker.com/get-docker/) instalado, com seu usuário
-  no grupo `docker` (para rodar sem `sudo` — necessário para o Dev Container)
-* [VS Code](https://code.visualstudio.com/) com a extensão **Dev Containers**
-* Google Chrome instalado na máquina host
-* Um bot configurado no Telegram (Token e Chat ID)
+* **Docker** instalado, com seu usuário no grupo `docker` (para rodar sem sudo — necessário para o Dev Container)
+* **VS Code** com a extensão Dev Containers
+* **Google Chrome** instalado na máquina host
+* Um **bot configurado no Telegram** (Token e Chat ID)
 * Acesso ao portal de agendamento do HSPM
 
-> **Nota de rede:** o container roda com `--network host`, então funciona de
-> forma nativa e completa apenas em **Linux**. Em Mac/Windows (Docker
-> Desktop) a configuração de rede precisa de ajuste (`host.docker.internal`
-> em vez de `localhost` para o CDP).
+> **Nota de rede:** o container roda com `--network host`, então funciona de forma nativa e completa apenas em Linux. Em Mac/Windows (Docker Desktop) a configuração de rede precisa de ajuste (`host.docker.internal` em vez de `localhost` para o CDP).
 
 ## 📝 Configuração inicial
 
-### 1. Clonar o repositório
+**1. Clonar o repositório**
 
 ```bash
 git clone https://github.com/Rjj18/bot-consultas.git
 cd bot-consultas
+
 ```
 
-### 2. Configurar variáveis de ambiente
-
+**2. Configurar variáveis de ambiente**
 Copie `.env.example` para `.env` e preencha:
 
 ```bash
 cp .env.example .env
+
 ```
 
 | Variável | Descrição | Obrigatória |
-|---|---|---|
+| --- | --- | --- |
 | `URL_AGENDAMENTO` | URL do portal de agendamento do HSPM | Sim |
 | `TELEGRAM_TOKEN` | Token do bot do Telegram | Sim |
 | `CHAT_ID` | ID do chat no Telegram para onde os alertas vão | Sim |
@@ -99,80 +100,63 @@ cp .env.example .env
 | `ARQUIVO_SELECIONADAS` | Arquivo JSON da seleção feita pelo Telegram | Não — padrão `especialidades_selecionadas.json` |
 | `ARQUIVO_PREFERENCIAS` | Arquivo JSON das preferências do monitor | Não — padrão `preferencias.json` |
 
-### 3. Definir as especialidades monitoradas
-
+**3. Definir as especialidades monitoradas**
 Edite `especialidades.txt` — uma especialidade por linha:
 
-```
+```text
 Clínica Médica
 Dermatologia
 Nutrição - Dietética
 Odontologia - Dentística
 Otorrinolaringologia
 Urologia
+
 ```
 
-O bot recarrega esse arquivo a cada ciclo — dá para editar com o bot já
-rodando, sem precisar reiniciar.
+O bot recarrega esse arquivo a cada ciclo — dá para editar com o bot já rodando, sem precisar reiniciar.
 
 ## 📱 Controle pelo Telegram
 
-O monitoramento começa automaticamente quando o programa é iniciado. No
-Telegram, use:
+O monitoramento começa automaticamente quando o programa é iniciado. No Telegram, use:
 
 * `/parar` — pausa as buscas, mantendo o navegador e o bot conectados.
 * `/iniciar` — retoma e inicia uma nova varredura imediatamente.
 * `/especialidades` — abre o menu para selecionar as especialidades monitoradas.
 * `/status` — mostra se o monitoramento está ativo ou pausado.
 
-Os comandos aparecem no menu nativo do Telegram ao tocar em `/`. O comando
-`/ajuda` também mostra a lista diretamente em uma mensagem.
+Os comandos aparecem no menu nativo do Telegram ao tocar em `/`. O comando `/ajuda` também mostra a lista diretamente em uma mensagem.
 
-A seleção é salva em `especialidades_selecionadas.json` e continua válida após
-reiniciar o programa. O arquivo `especialidades.txt` permanece sendo a lista
-base; especialidades removidas dele deixam de ser consideradas. Se todas forem
-selecionadas ou nenhuma seleção tiver sido salva, o bot monitora todas.
+A seleção é salva em `especialidades_selecionadas.json` e continua válida após reiniciar o programa. O arquivo `especialidades.txt` permanece sendo a lista base; especialidades removidas dele deixam de ser consideradas. Se todas forem selecionadas ou nenhuma seleção tiver sido salva, o bot monitora todas.
 
-Ao abrir `/especialidades`, use o botão `Print: ligado/desligado` para controlar
-o envio de uma captura de tela quando uma vaga for encontrada. A preferência é
-salva em `preferencias.json` e fica ligada por padrão. Mesmo com o print
-desligado, o alerta textual e os detalhes das vagas continuam sendo enviados.
+Ao abrir `/especialidades`, use o botão **Print: ligado/desligado** para controlar o envio de uma captura de tela quando uma vaga for encontrada. A preferência é salva em `preferencias.json` e fica ligada por padrão. Mesmo com o print desligado, o alerta textual e os detalhes das vagas continuam sendo enviados.
 
-Quando encontra uma vaga, o bot consulta o mês atual e o mês seguinte e envia
-os detalhes no formato:
-
-```text
-- 25 de setembro: 2 vagas | 13:40 | NOME DO PROFISSIONAL
-```
+Quando encontra uma vaga, o bot consulta o mês atual e o mês seguinte e envia os detalhes no formato:
+`- 25 de setembro: 2 vagas | 13:40 | NOME DO PROFISSIONAL`
 
 ## 🚀 Como rodar
 
-### 1. Abrir o Chrome com debug remoto (na máquina host, fora do container)
+**1. Abrir o Chrome com debug remoto** (na máquina host, fora do container)
 
 ```bash
 google-chrome --remote-debugging-port=9222 --user-data-dir="/tmp/chrome_dev_sessao"
+
 ```
 
-Deixe essa janela aberta e faça login manualmente no portal do HSPM nela —
-é essa sessão que o Playwright vai controlar.
+Deixe essa janela aberta e faça login manualmente no portal do HSPM nela — é essa sessão que o Playwright vai controlar.
 
-### 2. Abrir o projeto no Dev Container
-
+**2. Abrir o projeto no Dev Container**
 No VS Code: `Ctrl+Shift+P` → **Dev Containers: Reopen in Container**.
+Isso builda a imagem a partir do `Dockerfile` e roda automaticamente `uv sync` (via *postCreateCommand*), instalando todas as dependências.
 
-Isso builda a imagem a partir do `Dockerfile` e roda automaticamente
-`uv sync` (via `postCreateCommand`), instalando todas as dependências.
-
-### 3. Rodar o bot
-
+**3. Rodar o bot**
 No terminal integrado do VS Code (já dentro do container):
 
 ```bash
 uv run python -m vagas_hspm
+
 ```
 
-Se tudo estiver certo, você recebe a mensagem "🤖 Robô iniciado!" no
-Telegram configurado.
+Se tudo estiver certo, você recebe a mensagem "🤖 Robô iniciado!" no Telegram configurado.
 
 ## 🔄 Fluxo de desenvolvimento
 
@@ -182,47 +166,79 @@ uv run ruff check .         # lint
 uv run ruff format .        # formatação
 uv run mypy src              # checagem de tipos
 uv run pytest                # testes
+
 ```
 
-O `pre-commit` já roda lint e formatação automaticamente antes de cada
-`git commit`. O CI (`.github/workflows/ci.yml`) roda a mesma suíte completa
-a cada push/pull request.
+O `pre-commit` já roda lint e formatação automaticamente antes de cada `git commit`. O CI (`.github/workflows/ci.yml`) roda a mesma suíte completa a cada push/pull request.
 
-> Alterou o `Dockerfile` ou o `devcontainer.json`? Rode **Dev Containers:
-> Rebuild Container**. Alterou qualquer outro arquivo (`.env`, `.py`,
-> `especialidades.txt`)? Só salvar e rodar de novo — não precisa de rebuild.
+Alterou o `Dockerfile` ou o `devcontainer.json`? Rode **Dev Containers: Rebuild Container**. Alterou qualquer outro arquivo (`.env`, `.py`, `especialidades.txt`)? Só salvar e rodar de novo — não precisa de rebuild.
+
+## 🤝 Como Contribuir
+
+Contribuições são muito bem-vindas! Para mantermos o projeto organizado e o histórico limpo, siga o fluxo abaixo:
+
+### 1. Criando Branches
+
+Nunca faça commits diretamente na branch `main`. Crie uma branch a partir da `main` usando prefixos que descrevam o propósito da sua alteração:
+
+* **Novas funcionalidades:** `feature/nome-da-sua-feature`
+*(Ex: `git checkout -b feature/comando-historico`)*
+* **Correção de bugs:** `bugfix/nome-do-bug` ou `fix/nome-do-bug`
+*(Ex: `git checkout -b bugfix/timeout-login`)*
+* **Documentação:** `docs/nome-do-ajuste`
+*(Ex: `git checkout -b docs/atualiza-readme`)*
+* **Refatoração ou tarefas menores:** `refactor/...` ou `chore/...`
+
+### 2. Padrão de Commits
+
+Utilizamos o padrão [Conventional Commits](https://www.conventionalcommits.org/pt-br/). As mensagens de commit devem ser claras, no imperativo, e seguir o formato `<tipo>: <descrição>`:
+
+* `feat:` Para novas funcionalidades. *(Ex: `feat: adiciona opção de desativar prints no Telegram`)*
+* `fix:` Para correção de bugs. *(Ex: `fix: corrige seletor do botão de agendamento`)*
+* `docs:` Para alterações na documentação. *(Ex: `docs: adiciona guia de contribuição`)*
+* `chore:` Para manutenção, atualização de dependências, etc. *(Ex: `chore: atualiza versão do uv`)*
+* `test:` Para adição ou alteração de testes. *(Ex: `test: adiciona teste para o parser de datas`)*
+
+### 3. Submetendo suas alterações
+
+1. Certifique-se de que o **pre-commit** está instalado (`uv run pre-commit install`) para que o `ruff` formate o código automaticamente ao commitar.
+2. Rode os testes locais com `uv run pytest` para garantir que nada foi quebrado.
+3. Faça o push da sua branch para o repositório remoto.
+4. Abra um **Pull Request (PR)** apontando para a branch `main`. Descreva de forma objetiva o problema resolvido e as mudanças realizadas. O Github Actions (CI) fará a validação automática do seu código.
 
 ## 📋 Funcionalidades
 
-- ✅ Monitoramento automático e periódico de múltiplas especialidades
-- ✅ Detecção de sessão expirada com recuperação de CAPTCHA via Telegram
-- ✅ Login automático com CPF e senha (opcional)
-- ✅ Alertas em tempo real no Telegram, com print opcional quando encontra vaga
-- ✅ Detalhamento das vagas do mês atual e do mês seguinte, incluindo data,
-  quantidade, horário e profissional
-- ✅ Controle de envio de prints pelo menu de especialidades
-- ✅ Histórico de buscas em CSV (`historico_buscas.csv`)
-- ✅ Lista de especialidades editável em runtime, sem reiniciar o bot
-- ✅ Configuração validada na inicialização (falha cedo se faltar algo)
+✅ Monitoramento automático e periódico de múltiplas especialidades
+
+✅ Detecção de sessão expirada com recuperação de CAPTCHA via Telegram
+
+✅ Login automático com CPF e senha (opcional)
+
+✅ Alertas em tempo real no Telegram, com print opcional quando encontra vaga
+
+✅ Detalhamento das vagas do mês atual e do mês seguinte, incluindo data, quantidade, horário e profissional
+
+✅ Controle de envio de prints pelo menu de especialidades
+
+✅ Histórico de buscas em CSV (`historico_buscas.csv`)
+
+✅ Lista de especialidades editável em runtime, sem reiniciar o bot
+
+✅ Configuração validada na inicialização (falha cedo se faltar algo)
 
 ## 📱 Configurar o bot do Telegram
 
 1. No Telegram, procure `@BotFather` e use `/newbot`.
 2. Copie o token gerado para `TELEGRAM_TOKEN` no `.env`.
 3. Envie uma mensagem qualquer para o seu bot.
-4. Acesse `https://api.telegram.org/bot<SEU_TOKEN>/getUpdates` e copie o
-   `chat.id` da resposta para `CHAT_ID` no `.env`.
+4. Acesse `[https://api.telegram.org/bot](https://api.telegram.org/bot)<SEU_TOKEN>/getUpdates` e copie o `chat.id` da resposta para `CHAT_ID` no `.env`.
 
 ## ⚠️ Avisos importantes
 
-- **Segurança**: nunca compartilhe o `.env` ou suas credenciais. Ele já está
-  no `.gitignore` e nunca deve ser commitado.
-- **Sessão do Chrome**: o `connect_over_cdp` depende do Chrome permanecer
-  aberto com debug remoto durante toda a execução do bot.
-- **Responsabilidade**: use este bot de forma responsável e em conformidade
-  com os termos de uso do portal do HSPM.
-- **Manutenção**: seletores de página (`browser.py`) podem quebrar se o
-  portal do HSPM mudar sua interface.
+* **Segurança:** nunca compartilhe o `.env` ou suas credenciais. Ele já está no `.gitignore` e nunca deve ser commitado.
+* **Sessão do Chrome:** o `connect_over_cdp` depende do Chrome permanecer aberto com debug remoto durante toda a execução do bot.
+* **Responsabilidade:** use este bot de forma responsável e em conformidade com os termos de uso do portal do HSPM.
+* **Manutenção:** seletores de página (`browser.py`) podem quebrar se o portal do HSPM mudar sua interface.
 
 ## 📄 Licença
 

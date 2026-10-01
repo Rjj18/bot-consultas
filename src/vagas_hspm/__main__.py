@@ -11,7 +11,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 def main() -> None:
     settings = Settings()
-    asyncio.run(monitorar_vagas(settings))
+    try:
+        asyncio.run(monitorar_vagas(settings))
+    except KeyboardInterrupt:
+        logging.info("Encerramento solicitado pelo usuário.")
 
 
 if __name__ == "__main__":

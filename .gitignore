@@ -9,14 +9,27 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.tox/
+.nox/
+.cache/
+*.egg-info/
+build/
+dist/
 .coverage
 htmlcov/
+
+# Logs e artefatos de testes/navegadores
+*.log
+test-results/
+playwright-report/
+.DS_Store
 
 # Instruções locais do Copilot
 .github/copilot-instructions.md
 
 # Histórico de buscas e prints
 historico_buscas.csv
+especialidades_selecionadas.json
 print_*.png
 vaga_*.png
 *.png

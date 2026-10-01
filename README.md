@@ -1,8 +1,3 @@
-Aqui está o seu `README.md` atualizado com uma nova seção dedicada a **Colaborações e Contribuições**, detalhando os padrões de criação de branches e mensagens de commit baseadas no *Conventional Commits*.
-
-Inseri a nova seção logo após o "Fluxo de desenvolvimento", pois complementa perfeitamente as rotinas de `pre-commit` e CI/CD.
-
----
 
 # Bot de Agendamento HSPM 🤖🏥
 
